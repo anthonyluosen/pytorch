@@ -42,6 +42,7 @@ class Discrimnator(nn.Module):
             self._block(features_d*2,features_d*4,4,2,1),
             self._block(features_d*4,features_d*8,4,2,1),
             nn.Conv2d(features_d*8,1,4,2,0),
+            # nn.Sigmoid()
 
 
         )
@@ -55,13 +56,13 @@ class Discrimnator(nn.Module):
                 padding,
                 bias=False
             ),
-            nn.BatchNorm2d(out_channels),
+            nn.InstanceNorm2d(out_channels,affine=True),
             nn.LeakyReLU(0.2))
 
     def forward(self,x):
         return self.disc(x)
 def initialize_weight(model):
-    for p in model.modules:
+    for p in model.modules():
         if isinstance(p,(nn.Conv2d , nn.ConvTranspose2d,nn.BatchNorm2d)):
             nn.init.normal_(p.weight.data,0.0,0.02)
 def test():
