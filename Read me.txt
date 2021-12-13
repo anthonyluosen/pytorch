@@ -1,0 +1,18 @@
+1，代码功能：
+本次的项目代码主要处理来自UWB接收器的数据。包括数据的分析，数据的处理，模型的建立。
+
+2，安装环境，启动命令：
+Anaconda：jupyter notebook
+python3  version>3.6
+numpy Version: 1.19.2
+pandas Version: 1.1.3，
+tensorflow Version: 2.4.0 
+Sklearn verion is 0.23.2
+ 
+3，简要的使用说明
+将项目代码放入jupyter的运行环境，安装好python3，并且利用pip安装好相应的库即可使用
+代码中的数据可能有所更名，所以运行是可能出现错误
+ 
+5，常见问题说明
+代码不一定是从上到下就行完整运行完，可能需要调整代码顺和数据文件路径。
+相关数据已删除，需要请联系作者QQ:1346328449
