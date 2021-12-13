@@ -13,7 +13,7 @@ from pytorch.Efficientnet_practice.dataset import catdog
 from efficientnet_pytorch import EfficientNet
 from pytorch.Efficientnet_practice.utils import check_accuracy, load_checkpoint, save_checkpoint
 
-def save_feature_vectors(model, loader, outputsize = (1,1), file= 'trainb7'):
+def save_feature_vectors(model, loader, outputsize = (1,1), file= 'trainb0'):
     model.eval()
     images, labels= [], []
     for idx, (x,y) in enumerate(tqdm(loader)):
@@ -24,8 +24,10 @@ def save_feature_vectors(model, loader, outputsize = (1,1), file= 'trainb7'):
 
         images.append(features.reshape(x.shape[0],-1).detach().cpu().numpy())
         labels.append(y.numpy())
-    np.save(f'data_features/X_{file}.npy',np.concatenate(images,axis=0))
-    np.save(f'data_features/y_{file}.npy',np.concatenate(labels,axis=0))
+    if not os.path.exists('./data/data_features'):
+        os.makedirs('./data/data_features')
+    np.save(f'./data/data_features/X_{file}.npy',np.concatenate(images,axis=0))
+    np.save(f'./data/data_features/y_{file}.npy',np.concatenate(labels,axis=0))
     model.train()
 
 def train_one_epoch(loader, model, loss_fn, optimizer, scaler):
