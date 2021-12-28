@@ -9,7 +9,7 @@ from PIL import Image
 
 class catdog(Dataset):
     def __init__(self,root, transform):
-        self.images = os.listdir(root)[:1000]
+        self.images = os.listdir(root)
         # print(self.images)
         self.images.sort(key=lambda x:int(re.findall(r'\d+',x)[0]))
         # print(self.images)

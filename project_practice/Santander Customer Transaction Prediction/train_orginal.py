@@ -1,20 +1,19 @@
-#-*-coding =utf-8 -*-
-#@time :2021/12/5 10:47
-#@Author: Anthony
 import torch
-import torch.nn as nn
+from torch import nn, optim
 import os
-
-from tqdm import tqdm
-from torch.utils.data import DataLoader
 import config
+from torch.utils.data import DataLoader
+from tqdm import tqdm
 from sklearn.metrics import cohen_kappa_score
 from efficientnet_pytorch import EfficientNet
-from torchvision.utils import  save_image
-import  torch.optim  as optim
 from dataset import DRDataset
-from utils import (make_predictions, check_accuracy, load_checkpoint,save_checkpoint
-                   )
+from torchvision.utils import save_image
+from utils import (
+    load_checkpoint,
+    save_checkpoint,
+    check_accuracy,
+    make_predictions,
+)
 
 
 def train_one_epoch(loader, model, optimizer, loss_fn, scaler, device):
@@ -25,7 +24,7 @@ def train_one_epoch(loader, model, optimizer, loss_fn, scaler, device):
         # tip is to first set mean=[0,0,0], std=[1,1,1] so they look "normal"
         #save_image(data, f"hi_{batch_idx}.png")
 
-        data = data.to(device)
+        data = data.to(device=device)
         targets = targets.to(device=device)
 
         # forward
@@ -43,16 +42,18 @@ def train_one_epoch(loader, model, optimizer, loss_fn, scaler, device):
         loop.set_postfix(loss=loss.item())
 
     print(f"Loss average over epoch: {sum(losses)/len(losses)}")
+
+
 def main():
     train_ds = DRDataset(
         data_dir='D:\\database\\eye\\train',
         path_to_csv='D:\\database\\eye\\train.csv',
-        transformer=config.bsae_transforms
+        transformer=config.val_transforms
     )
     val_ds = DRDataset(
         data_dir='D:\\database\\eye\\train',
         path_to_csv='D:\\database\\eye\\vallabels.csv',
-        transformer=config.bsae_transforms
+        transformer=config.val_transforms
     )
     test_ids = DRDataset(
         data_dir='D:\\database\\eye\\test',
@@ -60,6 +61,7 @@ def main():
         transformer=config.val_transforms,
         train=False
     )
+
     train_loader = DataLoader(train_ds,
                               batch_size=config.BATCH_SIZE,
                               num_workers=0,
@@ -67,44 +69,58 @@ def main():
                               shuffle=True
                               )
     test_loader = DataLoader(test_ids,
-                              batch_size=config.BATCH_SIZE,
-                              num_workers=0,
-                              pin_memory=False,
-                              shuffle=True
-                              )
-    test_loader = DataLoader(val_ds,
+                             batch_size=config.BATCH_SIZE,
+                             num_workers=0,
+                             pin_memory=False,
+                             shuffle=True
+                             )
+    val_loader = DataLoader(val_ds,
                              batch_size=config.BATCH_SIZE,
                              num_workers=0,
                              pin_memory=False,
                              shuffle=False
                              )
-
-    loss_fn = nn.CrossEntropyLoss()
-    model = EfficientNet.from_pretrained('efficientnet-b0')
-    model._fc = nn.Linear(1280,5)
+    loss_fn = torch.nn.CrossEntropyLoss()
+    model = EfficientNet.from_pretrained("efficientnet-b3")
+    model._fc = nn.Linear(1536, 5)
+    model = model.to(config.DEVICE)
     optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY)
     scaler = torch.cuda.amp.GradScaler()
 
-    model.to(config.DEVICE)
     if config.LOAD_MODEL and config.CHECKPOINT_FILE in os.listdir():
-        load_checkpoint(torch.load(config.CHECKPOINT_FILE),model,optimizer,config.LEARNING_RATE)
+        load_checkpoint(torch.load(config.CHECKPOINT_FILE), model, optimizer, config.LEARNING_RATE)
+
+    # Run after training is done and you've achieved good result
+    # on validation set, then run train_blend.py file to use information
+    # about both eyes concatenated
+    # get_csv_for_blend(val_loader, model, "../train/val_blend.csv")
+    # get_csv_for_blend(train_loader, model, "../train/train_blend.csv")
+    # get_csv_for_blend(test_loader, model, "../train/test_blend.csv")
+    # make_prediction(model, test_loader, "submission_.csv")
+    # import sys
+    # sys.exit()
+    # make_prediction(model, test_loader)
 
     for epoch in range(config.NUM_EPOCHS):
+        print(f'the {epoch} of epoch out of {config.NUM_EPOCHS}')
         train_one_epoch(train_loader, model, optimizer, loss_fn, scaler, config.DEVICE)
 
-        #get one validation
-        preds,labels = check_accuracy(val_ds,model,config.DEVICE)
-        print(f'QuadraticWeightedKappa(validation):{cohen_kappa_score(labels, preds,weights="quadratic")}')
+        # get on validation
+        preds, labels = check_accuracy(val_loader, model, config.DEVICE)
+        print(f"QuadraticWeightedKappa (Validation): {cohen_kappa_score(labels, preds, weights='quadratic')}")
+
+        # get on train
+        #preds, labels = check_accuracy(train_loader, model, config.DEVICE)
+        #print(f"QuadraticWeightedKappa (Training): {cohen_kappa_score(labels, preds, weights='quadratic')}")
 
         if config.SAVE_MODEL:
-            check_point = {
-                'state_dict':model.state_dict(),
-                'optimizer':optimizer.state_dict(),
-
+            checkpoint = {
+                "state_dict": model.state_dict(),
+                "optimizer": optimizer.state_dict(),
             }
-            save_checkpoint(check_point,filename=config.CHECKPOINT_FILE)
-    make_predictions(model,test_loader)
+            save_checkpoint(checkpoint, filename=f"b3_{epoch}.pth.tar")
 
-if __name__ == '__main__':
-    # print(config.DEVICE)
+
+
+if __name__ == "__main__":
     main()
